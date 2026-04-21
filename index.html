@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>SSP Smart Analyzer</title>
+
+    <style>
+        :root {
+            --primary: #5a0f1f;
+            --secondary: #8b1e34;
+            --bg: #faf7f8;
+            --card: #ffffff;
+            --text: #222;
+        }
+
+        .dark {
+            --bg: #1a1a1a;
+            --card: #2a2a2a;
+            --text: #f5f5f5;
+
+        }
+
+        body {
+            margin: 0;
+            font-family: Segoe UI;
+            background: var(--bg);
+            color: var(--text);
+            transition: 0.3s;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .toggle {
+            text-align: right;
+            margin-bottom: 10px;
+            width: 35%;
+            position: absolute;
+            right: 0;
+            top: 0;
+
+        }
+
+        .toggle button {
+            background: var(--secondary);
+            color: #fff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .trait {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: 0.3s;
+        }
+
+        .trait:hover {
+            transform: translateY(-3px);
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--secondary);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .result {
+            margin-top: 25px;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress {
+            height: 8px;
+            background: #ddd;
+            border-radius: 10px;
+            margin-top: 8px;
+        }
+
+        .fill {
+            height: 100%;
+            background: var(--secondary);
+            border-radius: 10px;
+        }
+
+        .share {
+            margin-top: 10px;
+            background: var(--secondary);
+        }
+
+        .result {
+            transform: scale(1);
+            opacity: 1 !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="toggle">
+            <button onclick="toggleMode()">🌗 Toggle Mode</button>
+        </div>
+
+        <h1>SSP Smart Analyzer</h1>
+
+        <div id="traits"></div>
+
+        <button onclick="analyze()">Analyze</button>
+
+        <div id="result" class="result"></div>
+
+        <button class="share" onclick="shareResult()">📸 Share Result</button>
+
+    </div>
+
+    <script>
+
+        const traits = ["calculation", "logic", "memorization", "theory", "analysis", "creativity", "practical", "bio", "math", "business"];
+
+        const weights = {
+            PCM: { calculation: 1, logic: 0.9, math: 1, analysis: 0.8 },
+            PCB: { bio: 1, memorization: 0.9, theory: 0.8, logic: 0.5 },
+            Commerce: { business: 1, analysis: 0.9, calculation: 0.6, logic: 0.7 },
+            Arts: { creativity: 1, theory: 0.9, memorization: 0.7 }
+        };
+
+        const core = {
+            PCM: ["calculation", "math"],
+            PCB: ["bio", "memorization"],
+            Commerce: ["business", "analysis"],
+            Arts: ["creativity", "theory"]
+        };
+
+        const container = document.getElementById("traits");
+
+        traits.forEach(t => {
+            container.innerHTML += `
+  <div class="trait">
+    <b>${t.toUpperCase()}</b>
+    <div>Interest</div>
+    <input type="range" min="0" max="100" value="50" id="${t}_i">
+    <div>Ability</div>
+    <input type="range" min="0" max="100" value="50" id="${t}_a">
+  </div>
+ `;
+        });
+
+        function analyze() {
+
+            let scores = { PCM: 0, PCB: 0, Commerce: 0, Arts: 0 };
+            let strengths = [];
+            let weaknesses = [];
+
+            traits.forEach(trait => {
+                let i = +document.getElementById(trait + "_i").value;
+                let a = +document.getElementById(trait + "_a").value;
+
+                let combined = (i * 0.6 + a * 0.4);
+
+                for (let s in weights) {
+                    if (weights[s][trait]) {
+                        scores[s] += combined * weights[s][trait];
+
+                        if (core[s].includes(trait) && a < 40) {
+                            scores[s] -= 25;
+                            weaknesses.push(trait);
+                        }
+                    }
+                }
+
+                if (i > 75 && a > 70) {
+                    strengths.push(trait);
+                }
+            });
+
+            let max = Math.max(...Object.values(scores));
+            for (let s in scores) {
+                scores[s] = (scores[s] / max) * 100;
+            }
+
+            let sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+            let top = sorted[0];
+            let second = sorted[1];
+
+            let gap = Math.round(top[1] - second[1]);
+
+            let explanation = `
+ You are suited for <b>${top[0]}</b> because you show strong ability in 
+ <b>${strengths.slice(0, 3).join(", ")}</b>. 
+ However, you should improve <b>${weaknesses.slice(0, 2).join(", ") || "consistency"}</b>.
+ `;
+
+            const careers = {
+                PCM: ["Engineering", "AI/Tech", "NDA", "Pilot"],
+                PCB: ["Doctor", "Medical", "Biotech"],
+                Commerce: ["CA", "Finance", "Startup"],
+                Arts: ["UPSC", "Law", "Psychology"]
+            };
+
+            document.getElementById("result").innerHTML = `
+  <h2>${top[0]} (${Math.round(top[1])}%)</h2>
+
+  <div class="progress">
+   <div class="fill" style="width:${Math.round(top[1])}%"></div>
+  </div>
+
+  <p><b>Alternative:</b> ${second[0]} (Gap: ${gap}%)</p>
+
+  <p>${explanation}</p>
+
+  <h3>Career Options</h3>
+  <ul>${careers[top[0]].map(c => `<li>${c}</li>`).join("")}</ul>
+ `;
+        }
+
+        function toggleMode() {
+            document.body.classList.toggle("dark");
+        }
+
+        function shareResult() {
+            const original = document.getElementById("result");
+
+            // clone element
+            const clone = original.cloneNode(true);
+
+            // force styles (IMPORTANT)
+            clone.style.background = "#ffffff";
+            clone.style.color = "#000";
+            clone.style.opacity = "1";
+            clone.style.filter = "none";
+
+            clone.style.position = "fixed";
+            clone.style.top = "-9999px";
+            clone.style.left = "-9999px";
+
+            document.body.appendChild(clone);
+
+            html2canvas(clone, {
+                scale: 3, // ultra sharp
+                useCORS: true,
+                backgroundColor: "#ffffff"
+            }).then(canvas => {
+
+                const ctx = canvas.getContext("2d");
+
+                // WATERMARK (visible but not annoying)
+                ctx.globalAlpha = 0.12;
+                ctx.font = "bold 50px Arial";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#5a0f1f";
+                ctx.fillText("Saksham Study Point", canvas.width / 2, canvas.height / 2);
+
+                ctx.globalAlpha = 0.7;
+                ctx.font = "18px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText("Saksham Study Point", canvas.width - 20, canvas.height - 20);
+
+                // download
+                const link = document.createElement("a");
+                link.download = "ssp-result.png";
+                link.href = canvas.toDataURL("image/png", 1.0);
+                link.click();
+
+                document.body.removeChild(clone);
+            });
+        }
+
+    </script>
+
+    <!-- html2canvas CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+</body>
+
+</html>
